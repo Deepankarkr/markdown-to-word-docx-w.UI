@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Markdown to Word Converter</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="card">
+    <div class="header">
+      <div>
+        <p class="eyebrow">Markdown to Word</p>
+        <h1>Create beautiful DOCX files</h1>
+      </div>
+    </div>
+
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form action="/convert" method="post" enctype="multipart/form-data">
+      <label class="upload-box">
+        <input type="file" name="files" accept=".md,.markdown,.txt" multiple required>
+        <span class="upload-title">Upload Markdown files</span>
+        <span class="upload-help">Select one or more .md, .markdown, or .txt files</span>
+      </label>
+
+      <section class="options">
+        <label class="option">
+          <input type="radio" name="mode" value="merged" checked>
+          <span>
+            <strong>Merge into one DOCX</strong>
+            <small>All Markdown files become one Word document.</small>
+          </span>
+        </label>
+
+        <label class="option">
+          <input type="radio" name="mode" value="separate">
+          <span>
+            <strong>Create separate DOCX files</strong>
+            <small>Downloads a ZIP containing one DOCX per file.</small>
+          </span>
+        </label>
+      </section>
+
+      <button type="submit">Convert and Download</button>
+    </form>
+  </main>
+</body>
+</html>
