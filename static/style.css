@@ -5,8 +5,10 @@
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: Arial, sans-serif;
-  background: linear-gradient(135deg, #eef4fb, #f8fafc);
+  font-family: "Dreaming Outloud Pro", "MV Boli", "Comic Sans MS", cursive;
+  background-color: #fffdf3;
+  background-image: linear-gradient(#dcecff 1px, transparent 1px), linear-gradient(90deg, #ffdce5 1px, transparent 1px);
+  background-size: 28px 28px;
   display: grid;
   place-items: center;
   color: #172033;
@@ -14,10 +16,12 @@ body {
 
 .card {
   width: min(760px, 92vw);
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.96);
   border-radius: 22px;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+  box-shadow: 8px 10px 0 rgba(58, 134, 255, 0.15), 0 24px 70px rgba(15, 23, 42, 0.10);
   padding: 34px;
+  border: 3px solid #263238;
+  transform: rotate(-0.25deg);
 }
 
 .header {
@@ -39,6 +43,13 @@ h1 {
   margin: 0;
   font-size: 34px;
   line-height: 1.15;
+}
+
+.intro {
+  max-width: 610px;
+  margin: 12px 0 0;
+  color: #52606d;
+  line-height: 1.6;
 }
 
 .error {
@@ -83,6 +94,28 @@ h1 {
   margin: 24px 0;
 }
 
+.theme-note {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 17px;
+  border: 2px dashed #8e6ccf;
+  border-radius: 11px 17px 10px 15px;
+  background: #f5efff;
+  transform: rotate(0.35deg);
+}
+
+.theme-note strong,
+.theme-note small { display: block; }
+
+.theme-note small {
+  margin-top: 5px;
+  line-height: 1.45;
+  color: #665b78;
+}
+
+.theme-icon { font-size: 30px; color: #e85d75; }
+
 .option {
   display: flex;
   gap: 12px;
@@ -117,13 +150,18 @@ button {
   border: 0;
   border-radius: 14px;
   padding: 15px 18px;
-  background: #2563eb;
+  background: #e85d75;
   color: #ffffff;
   font-size: 16px;
   font-weight: 800;
   cursor: pointer;
+  font-family: inherit;
+  border: 2px solid #263238;
+  box-shadow: 4px 5px 0 #263238;
 }
 
 button:hover {
-  background: #1d4ed8;
+  background: #d94867;
+  transform: translate(2px, 2px);
+  box-shadow: 2px 3px 0 #263238;
 }
