@@ -116,6 +116,38 @@ h1 {
 
 .theme-icon { font-size: 30px; color: #e85d75; }
 
+.format-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 15px;
+  border: 2px solid #3a86ff;
+  border-radius: 14px;
+  background: #eef6ff;
+}
+
+.format-label {
+  grid-column: 1 / -1;
+  font-weight: 800;
+  color: #245fae;
+}
+
+.format-option {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  padding: 11px;
+  border: 1px dashed #80b3ee;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.format-option strong,
+.format-option small { display: block; }
+
+.format-option small { margin-top: 2px; color: #64748b; }
+
 .option {
   display: flex;
   gap: 12px;

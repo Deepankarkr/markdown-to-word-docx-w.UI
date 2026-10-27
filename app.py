@@ -1,4 +1,5 @@
 import hashlib
+import html
 import io
 import random
 import re
@@ -15,6 +16,15 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 from flask import Flask, render_template, request, send_file
 from markdown import markdown
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.graphics.shapes import Circle, Drawing, String
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024
@@ -73,6 +83,172 @@ def normalize_compact_lists(md_text):
         output.append(line)
         previous_text = plain
     return "".join(output)
+
+
+def register_pdf_fonts():
+    """Use MV Boli when installed, with a portable fallback for deployment."""
+    font_path = Path(r"C:\Windows\Fonts\mvboli.ttf")
+    if font_path.exists() and "MV Boli" not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont("MV Boli", str(font_path)))
+    return "MV Boli" if "MV Boli" in pdfmetrics.getRegisteredFontNames() else "Helvetica"
+
+
+def pdf_styles():
+    font = register_pdf_fonts()
+    styles = getSampleStyleSheet()
+    return {
+        "font": font,
+        "body": ParagraphStyle("NotesBody", parent=styles["BodyText"], fontName=font, fontSize=12,
+                               leading=16, textColor=colors.HexColor(f"#{INK}"), spaceAfter=9),
+        "h1": ParagraphStyle("NotesH1", parent=styles["Heading1"], fontName=font, fontSize=23,
+                             leading=25, textColor=colors.HexColor(f"#{ACCENTS[1]}"), spaceBefore=12, spaceAfter=9),
+        "h2": ParagraphStyle("NotesH2", parent=styles["Heading2"], fontName=font, fontSize=18,
+                             leading=20, textColor=colors.HexColor(f"#{ACCENTS[2]}"), spaceBefore=10, spaceAfter=7),
+        "h3": ParagraphStyle("NotesH3", parent=styles["Heading3"], fontName=font, fontSize=15,
+                             leading=17, textColor=colors.HexColor(f"#{ACCENTS[4]}"), spaceBefore=8, spaceAfter=6),
+        "code": ParagraphStyle("NotesCode", parent=styles["Code"], fontName="Courier", fontSize=9,
+                               leading=12, leftIndent=12, rightIndent=8, spaceBefore=6, spaceAfter=9,
+                               backColor=colors.HexColor("#F0EEF6"), borderColor=colors.HexColor("#8E6CCF"),
+                               borderWidth=1, borderPadding=7),
+        "quote": ParagraphStyle("NotesQuote", parent=styles["BodyText"], fontName=font, fontSize=12,
+                                leading=16, leftIndent=16, textColor=colors.HexColor("#5D4777"),
+                                backColor=colors.HexColor("#ECE2FF"), borderColor=colors.HexColor("#8E6CCF"),
+                                borderWidth=1, borderPadding=7, spaceAfter=9),
+        "bullet": ParagraphStyle("NotesBullet", parent=styles["BodyText"], fontName=font, fontSize=12,
+                                 leading=16, textColor=colors.HexColor(f"#{INK}")),
+        "marker": ParagraphStyle("NotesMarker", parent=styles["BodyText"], fontName=font, fontSize=16,
+                                 leading=16, alignment=TA_CENTER),
+    }
+
+
+def pdf_inline(element):
+    parts = []
+    for child in element.children:
+        if isinstance(child, NavigableString):
+            parts.append(html.escape(str(child)))
+        elif isinstance(child, Tag):
+            if child.name in ("ul", "ol"):
+                continue
+            if child.name == "br":
+                parts.append("<br/>")
+                continue
+            content = pdf_inline(child)
+            if child.name in ("strong", "b"):
+                content = f"<b>{content}</b>"
+            elif child.name in ("em", "i"):
+                content = f"<i><u>{content}</u></i>"
+            elif child.name == "code":
+                content = f'<font name="Courier" color="#9C2F56">{content}</font>'
+            elif child.name == "a":
+                href = html.escape(child.get("href", ""), quote=True)
+                content = f'<link href="{href}" color="#3A86FF"><u>{content}</u></link>'
+            parts.append(content)
+    return "".join(parts)
+
+
+def add_pdf_list(story, list_tag, styles, rng, ordered=False, depth=0):
+    for index, item in enumerate(list_tag.find_all("li", recursive=False), start=1):
+        content = Paragraph(pdf_inline(item), styles["bullet"])
+        if ordered:
+            marker = Paragraph(f"{index}.", styles["marker"])
+            fill, accent = colors.white, colors.HexColor(f"#{ACCENTS[1]}")
+        else:
+            palette = rng.randrange(len(ACCENTS))
+            fill, accent = colors.HexColor(f"#{PASTELS[palette]}"), colors.HexColor(f"#{ACCENTS[palette]}")
+            # Draw the marker as vector artwork. This remains crisp and cannot
+            # turn into a missing-glyph square in different PDF viewers.
+            marker_text = ">"
+            marker = Drawing(24, 24)
+            marker.add(Circle(12, 12, 10, fillColor=accent, strokeColor=None))
+            marker.add(String(12, 7.5, marker_text, fontName="Helvetica-Bold", fontSize=13,
+                              fillColor=colors.white, textAnchor="middle"))
+        width = max(3.8 * inch, 6.55 * inch - depth * 0.28 * inch)
+        card = Table([[marker, content]], colWidths=[0.42 * inch, width - 0.42 * inch], hAlign="LEFT")
+        card.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), fill), ("LINEBEFORE", (0, 0), (0, -1), 4, accent),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (-1, -1), 7),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 7), ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story.extend([card, Spacer(1, 5)])
+        for nested in item.find_all(["ul", "ol"], recursive=False):
+            add_pdf_list(story, nested, styles, rng, nested.name == "ol", depth + 1)
+
+
+def add_markdown_to_pdf(story, md_text, styles, source_title=None):
+    rng = seeded_rng((source_title or "") + "\n" + md_text)
+    soup = BeautifulSoup(markdown(normalize_compact_lists(md_text),
+        extensions=["tables", "fenced_code", "sane_lists", "nl2br"], output_format="html5"), "html.parser")
+    if source_title:
+        story.append(Paragraph(html.escape(source_title), styles["h1"]))
+    for element in soup.children:
+        if not isinstance(element, Tag):
+            continue
+        if re.fullmatch(r"h[1-6]", element.name):
+            story.append(Paragraph(pdf_inline(element), styles[f"h{min(int(element.name[1]), 3)}"]))
+        elif element.name == "p":
+            story.append(Paragraph(pdf_inline(element), styles["body"]))
+        elif element.name in ("ul", "ol"):
+            add_pdf_list(story, element, styles, rng, element.name == "ol")
+        elif element.name == "pre":
+            story.append(Paragraph(html.escape(element.get_text()).replace("\n", "<br/>"), styles["code"]))
+        elif element.name == "blockquote":
+            story.append(Paragraph(html.escape(element.get_text(" ", strip=True)), styles["quote"]))
+        elif element.name == "table":
+            rows = element.find_all("tr")
+            data = [[Paragraph(html.escape(cell.get_text(" ", strip=True)), styles["bullet"])
+                     for cell in row.find_all(["th", "td"])] for row in rows]
+            if data:
+                table = Table(data, repeatRows=1, hAlign="LEFT")
+                commands = [("GRID", (0, 0), (-1, -1), 0.8, colors.HexColor("#8E6CCF")),
+                            ("VALIGN", (0, 0), (-1, -1), "TOP"), ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3A86FF")),
+                            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white), ("TOPPADDING", (0, 0), (-1, -1), 7),
+                            ("BOTTOMPADDING", (0, 0), (-1, -1), 7)]
+                for row_index in range(1, len(data)):
+                    commands.append(("BACKGROUND", (0, row_index), (-1, row_index), colors.HexColor(f"#{PASTELS[row_index % len(PASTELS)]}")))
+                table.setStyle(TableStyle(commands))
+                story.extend([table, Spacer(1, 9)])
+        elif element.name == "hr":
+            story.append(Paragraph("★ &nbsp; ~ &nbsp; ★ &nbsp; ~ &nbsp; ★", styles["h3"]))
+
+
+def pdf_page(canvas, doc):
+    canvas.saveState()
+    canvas.setFillColor(colors.HexColor(f"#{PAPER}"))
+    canvas.rect(0, 0, A4[0], A4[1], fill=1, stroke=0)
+    canvas.restoreState()
+
+
+def make_pdf(md_text, title):
+    output, story, styles = io.BytesIO(), [], pdf_styles()
+    title_text = Paragraph(html.escape(title), styles["h1"])
+    title_card = Table([[title_text]], colWidths=[6.55 * inch], hAlign="CENTER")
+    title_card.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(f"#{PASTELS[1]}")),
+        ("BOX", (0, 0), (-1, -1), 2, colors.HexColor(f"#{ACCENTS[0]}")),
+        ("TOPPADDING", (0, 0), (-1, -1), 10), ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LEFTPADDING", (0, 0), (-1, -1), 12), ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+    ]))
+    story.extend([title_card, Spacer(1, 14)])
+    add_markdown_to_pdf(story, md_text, styles)
+    document = SimpleDocTemplate(output, pagesize=A4, title=title, topMargin=0.55 * inch,
+                                 bottomMargin=0.55 * inch, leftMargin=0.65 * inch, rightMargin=0.65 * inch)
+    document.build(story, onFirstPage=pdf_page, onLaterPages=pdf_page)
+    output.seek(0)
+    return output
+
+
+def make_merged_pdf(files):
+    output, story, styles = io.BytesIO(), [], pdf_styles()
+    for index, file in enumerate(files):
+        if index:
+            story.append(PageBreak())
+        add_markdown_to_pdf(story, file.read().decode("utf-8", errors="replace"), styles, clean_name(file.filename))
+    document = SimpleDocTemplate(output, pagesize=A4, title="Merged Markdown Document", topMargin=0.55 * inch,
+                                 bottomMargin=0.55 * inch, leftMargin=0.65 * inch, rightMargin=0.65 * inch)
+    document.build(story, onFirstPage=pdf_page, onLaterPages=pdf_page)
+    output.seek(0)
+    return output
 
 
 def set_font(run, name="MV Boli", size=None, color=None):
@@ -361,12 +537,18 @@ def index():
 def convert():
     files = request.files.getlist("files")
     valid = [f for f in files if f and f.filename and allowed_file(f.filename)]
+    output_format = request.form.get("output_format", "docx").lower()
+    if output_format not in ("docx", "pdf"):
+        output_format = "docx"
     if not valid:
         return render_template("index.html", error="Please upload at least one .md, .markdown, or .txt file."), 400
     if len(valid) == 1:
         file = valid[0]
         base = clean_name(file.filename)
         text = file.read().decode("utf-8", errors="replace")
+        if output_format == "pdf":
+            return send_file(make_pdf(text, base), as_attachment=True, download_name=f"{base}.pdf",
+                             mimetype="application/pdf")
         return send_file(
             make_docx(text, base),
             as_attachment=True,
@@ -374,15 +556,22 @@ def convert():
             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
     if request.form.get("mode", "separate") == "merged":
+        if output_format == "pdf":
+            return send_file(make_merged_pdf(valid), as_attachment=True, download_name="merged_markdown_document.pdf",
+                             mimetype="application/pdf")
         return send_file(make_merged_docx(valid), as_attachment=True, download_name="merged_markdown_document.docx",
                          mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
         for file in valid:
             text, base = file.read().decode("utf-8", errors="replace"), clean_name(file.filename)
-            archive.writestr(f"{base}.docx", make_docx(text, base).getvalue())
+            if output_format == "pdf":
+                archive.writestr(f"{base}.pdf", make_pdf(text, base).getvalue())
+            else:
+                archive.writestr(f"{base}.docx", make_docx(text, base).getvalue())
     output.seek(0)
-    return send_file(output, as_attachment=True, download_name="converted_docx_files.zip", mimetype="application/zip")
+    zip_name = "converted_pdf_files.zip" if output_format == "pdf" else "converted_docx_files.zip"
+    return send_file(output, as_attachment=True, download_name=zip_name, mimetype="application/zip")
 
 
 if __name__ == "__main__":
