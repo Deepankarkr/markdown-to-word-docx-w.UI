@@ -139,7 +139,7 @@ def setup_document(doc):
     normal.font.name, normal.font.size = "MV Boli", Pt(13)
     normal._element.rPr.rFonts.set(qn("w:eastAsia"), "MV Boli")
     normal.font.color.rgb = RGBColor.from_string(INK)
-    normal.paragraph_format.space_after, normal.paragraph_format.line_spacing = Pt(10), 1.28
+    normal.paragraph_format.space_after, normal.paragraph_format.line_spacing = Pt(10), 1.0
     for level, size in ((1, 25), (2, 20), (3, 17)):
         style = styles[f"Heading {level}"]
         style.font.name, style.font.size, style.font.bold = "MV Boli", Pt(size), True
@@ -150,7 +150,7 @@ def setup_document(doc):
     for name in ("List Bullet", "List Number"):
         style = styles[name]
         style.font.name, style.font.size = "MV Boli", Pt(13)
-        style.paragraph_format.space_after, style.paragraph_format.line_spacing = Pt(7), 1.25
+        style.paragraph_format.space_after, style.paragraph_format.line_spacing = Pt(7), 1.0
     if "Handwritten Bullet" not in [s.name for s in styles]:
         style = styles.add_style("Handwritten Bullet", WD_STYLE_TYPE.PARAGRAPH)
         style.base_style = normal
@@ -158,7 +158,7 @@ def setup_document(doc):
         style._element.rPr.rFonts.set(qn("w:eastAsia"), "MV Boli")
         style.paragraph_format.space_before = Pt(4)
         style.paragraph_format.space_after = Pt(8)
-        style.paragraph_format.line_spacing = 1.3
+        style.paragraph_format.line_spacing = 1.0
         style.paragraph_format.keep_together = True
     if "Code Block" not in [s.name for s in styles]:
         style = styles.add_style("Code Block", WD_STYLE_TYPE.PARAGRAPH)
@@ -166,14 +166,14 @@ def setup_document(doc):
         style.font.color.rgb = RGBColor.from_string("39424E")
         style.paragraph_format.left_indent, style.paragraph_format.right_indent = Inches(0.22), Inches(0.16)
         style.paragraph_format.space_before, style.paragraph_format.space_after = Pt(8), Pt(12)
-        style.paragraph_format.line_spacing = 1.18
+        style.paragraph_format.line_spacing = 1.0
     if "Quote Block" not in [s.name for s in styles]:
         style = styles.add_style("Quote Block", WD_STYLE_TYPE.PARAGRAPH)
         style.font.name, style.font.size, style.font.italic = "MV Boli", Pt(13), True
         style.font.color.rgb = RGBColor.from_string("5D4777")
         style.paragraph_format.left_indent, style.paragraph_format.right_indent = Inches(0.28), Inches(0.12)
         style.paragraph_format.space_before, style.paragraph_format.space_after = Pt(8), Pt(12)
-        style.paragraph_format.line_spacing = 1.25
+        style.paragraph_format.line_spacing = 1.0
 
 
 def add_title_page(doc, title, subtitle=None):
@@ -242,7 +242,7 @@ def set_cell_text(cell, text, bold, color, fill):
     shade_cell(cell, fill)
     set_cell_margins(cell)
     p = cell.paragraphs[0]
-    p.paragraph_format.space_after, p.paragraph_format.line_spacing = Pt(2), 1.18
+    p.paragraph_format.space_after, p.paragraph_format.line_spacing = Pt(2), 1.0
     run = p.add_run(text)
     run.bold = bold
     set_font(run, size=12.5 if bold else 12, color=color)
