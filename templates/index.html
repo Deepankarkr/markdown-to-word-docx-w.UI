@@ -22,10 +22,21 @@
 
     <form action="/convert" method="post" enctype="multipart/form-data">
       <label class="upload-box">
-        <input type="file" name="files" accept=".md,.markdown,.txt" multiple required>
+        <input class="file-input" type="file" name="files" accept=".md,.markdown,.txt" multiple required>
         <span class="upload-title">Upload Markdown files</span>
         <span class="upload-help">Select one or more .md, .markdown, or .txt files</span>
+        <span class="file-picker-row">
+          <span class="file-picker-button">Choose files</span>
+          <span id="file-summary" class="file-summary" aria-live="polite">No files selected</span>
+        </span>
       </label>
+      <div id="selected-files" class="selected-files" hidden>
+        <div class="selected-files-heading">
+          <strong>Selected files</strong>
+          <span id="file-count"></span>
+        </div>
+        <ul id="file-list"></ul>
+      </div>
 
       <section class="options">
         <div class="theme-note">
@@ -65,8 +76,34 @@
         </label>
       </section>
 
-      <button type="submit">Make my notes ✦</button>
+      <div class="actions">
+        <button type="submit">Make my notes ✦</button>
+        <button id="view-button" class="view-button" type="submit" formaction="/view" formmethod="post" formtarget="_blank" hidden>View</button>
+      </div>
     </form>
+    <script>
+      const fileInput = document.querySelector('input[name="files"]');
+      const viewButton = document.getElementById('view-button');
+      const fileSummary = document.getElementById('file-summary');
+      const selectedFiles = document.getElementById('selected-files');
+      const fileCount = document.getElementById('file-count');
+      const fileList = document.getElementById('file-list');
+      fileInput.addEventListener('change', () => {
+        const files = Array.from(fileInput.files);
+        viewButton.hidden = files.length !== 1;
+        selectedFiles.hidden = files.length === 0;
+        fileSummary.textContent = files.length === 0
+          ? 'No files selected'
+          : `${files.length} ${files.length === 1 ? 'file' : 'files'} selected`;
+        fileCount.textContent = files.length;
+        fileList.replaceChildren(...files.map(file => {
+          const item = document.createElement('li');
+          item.textContent = file.name;
+          item.title = file.name;
+          return item;
+        }));
+      });
+    </script>
   </main>
 </body>
 </html>

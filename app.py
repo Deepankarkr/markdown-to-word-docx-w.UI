@@ -16,6 +16,8 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 from flask import Flask, render_template, request, send_file
 from markdown import markdown
+from markupsafe import Markup
+from pygments.formatters import HtmlFormatter
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
@@ -36,6 +38,20 @@ HIGHLIGHTS = [WD_COLOR_INDEX.YELLOW, WD_COLOR_INDEX.BRIGHT_GREEN, WD_COLOR_INDEX
 BULLET_MARKERS = ["★", "➜", "◆", "✓", "💡", "📌"]
 LIST_LINE = re.compile(r"^\s{0,3}(?:[-+*]|\d+[.)])\s+\S")
 FENCE_LINE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
+
+
+def preserve_mermaid_fences(source):
+    """Keep Mermaid's language marker intact while Pygments handles other fences."""
+    fence = re.compile(
+        r"(?ms)^(?P<indent>[ \t]*)(?P<marker>`{3,}|~{3,})[ \t]*mermaid[^\n]*\n"
+        r"(?P<body>.*?)^(?P=indent)(?P=marker)[ \t]*$"
+    )
+
+    def replace(match):
+        diagram = html.escape(match.group("body").rstrip())
+        return f'\n<pre><code class="language-mermaid">{diagram}</code></pre>\n'
+
+    return fence.sub(replace, source)
 
 
 def allowed_file(filename):
@@ -531,6 +547,35 @@ def make_merged_docx(files):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.post("/view")
+def view_markdown():
+    files = request.files.getlist("files")
+    valid = [file for file in files if file and file.filename and allowed_file(file.filename)]
+    if len(valid) != 1:
+        return "Select exactly one Markdown file to preview.", 400
+
+    file = valid[0]
+    source = file.read().decode("utf-8", errors="replace")
+    rendered = markdown(
+        preserve_mermaid_fences(source),
+        extensions=["fenced_code", "tables", "toc", "sane_lists", "smarty", "codehilite"],
+        extension_configs={
+            "codehilite": {"guess_lang": False, "css_class": "codehilite", "linenums": False},
+            "toc": {"permalink": True},
+        },
+        output_format="html5",
+    )
+    title_match = re.search(r"^#\s+(.+)$", source, re.MULTILINE)
+    title = re.sub(r"[*_`\[\]]", "", title_match.group(1)).strip() if title_match else clean_name(file.filename)
+    return render_template(
+        "viewer.html",
+        title=title,
+        filename=file.filename,
+        content=Markup(rendered),
+        pygments_css=Markup(HtmlFormatter(style="monokai").get_style_defs(".codehilite")),
+    )
 
 
 @app.route("/convert", methods=["POST"])

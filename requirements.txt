@@ -4,3 +4,4 @@ Markdown==3.6
 beautifulsoup4==4.12.3
 Werkzeug==3.0.3
 reportlab==4.2.5
+Pygments==2.18.0

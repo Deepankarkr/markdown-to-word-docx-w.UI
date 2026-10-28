@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f7fb; --surface: #fff; --text: #172033; --muted: #667085;
+      --border: #d9dfeb; --accent: #3159d9; --code: #111827; --code-text: #e5e7eb;
+      --shadow: 0 12px 38px rgba(17, 24, 39, .10);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117; --surface: #161b22; --text: #e6edf3; --muted: #9da7b3;
+        --border: #30363d; --accent: #79a6ff; --code: #0b0f14; --code-text: #e6edf3;
+        --shadow: 0 12px 38px rgba(0, 0, 0, .35);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.7 system-ui, sans-serif; }
+    .topbar { position: sticky; top: 0; z-index: 20; display: flex; gap: 1rem; align-items: center;
+      padding: .75rem max(1rem, calc((100vw - 1120px) / 2)); background: color-mix(in srgb, var(--surface) 92%, transparent);
+      border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); }
+    .topbar a { color: var(--accent); text-decoration: none; font-weight: 650; }
+    .filename { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+    main { width: min(1120px, calc(100% - 2rem)); margin: 2rem auto 5rem; padding: clamp(1.2rem, 4vw, 4rem);
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
+    h1, h2, h3, h4 { line-height: 1.25; scroll-margin-top: 5rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3.2rem); padding-bottom: .55rem; border-bottom: 2px solid var(--border); }
+    h2 { margin-top: 2.8rem; padding-bottom: .35rem; border-bottom: 1px solid var(--border); }
+    h3 { margin-top: 2rem; }
+    a { color: var(--accent); text-underline-offset: 3px; }
+    blockquote { margin: 1.4rem 0; padding: .7rem 1.2rem; color: var(--muted); border-left: 4px solid var(--accent); background: var(--bg); }
+    img { max-width: 100%; height: auto; border-radius: 10px; }
+    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    :not(pre) > code { padding: .15em .4em; border: 1px solid var(--border); border-radius: 5px; background: var(--bg); }
+    .codehilite, main > pre { position: relative; margin: 1.4rem 0; border: 1px solid #293244; border-radius: 10px;
+      background: var(--code); color: var(--code-text); overflow: hidden; }
+    pre { margin: 0; padding: 1.15rem; overflow: auto; tab-size: 4; line-height: 1.55; }
+    .copy-code { position: absolute; top: .55rem; right: .55rem; z-index: 2; border: 1px solid #465168; border-radius: 6px;
+      padding: .3rem .6rem; color: #e5e7eb; background: #202938; cursor: pointer; }
+    .table-wrap { margin: 1.5rem 0; overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); }
+    th, td { padding: .7rem .85rem; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); font-weight: 700; }
+    tr:nth-child(even) td { background: color-mix(in srgb, var(--bg) 65%, var(--surface)); }
+    th:last-child, td:last-child { border-right: 0; } tr:last-child td { border-bottom: 0; }
+    .diagram-shell { position: relative; margin: 1.6rem 0; min-height: 180px; overflow: hidden; touch-action: none;
+      border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--surface) 96%, #8bb4ff); }
+    .diagram-canvas { min-width: 100%; min-height: 180px; padding: 3.2rem 1rem 1.4rem; cursor: grab; transform-origin: center center; }
+    .diagram-canvas.dragging { cursor: grabbing; }
+    .diagram-canvas svg { display: block; width: 100%; min-width: 650px; height: auto; max-width: none !important; margin: auto; }
+    .diagram-tools { position: absolute; z-index: 5; top: .55rem; right: .55rem; display: flex; gap: .35rem; }
+    .diagram-tools button { min-width: 2.2rem; padding: .35rem .55rem; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--surface); color: var(--text); cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    .diagram-shell:fullscreen { width: 100vw; height: 100vh; border: 0; border-radius: 0; }
+    .diagram-shell:fullscreen .diagram-canvas { height: 100%; display: grid; place-items: center; }
+    .error { padding: 1rem; border: 1px solid #dc2626; border-radius: 8px; color: #dc2626; white-space: pre-wrap; }
+    {{ pygments_css|safe }}
+    @media (max-width: 650px) { main { width: 100%; margin: 0; border: 0; border-radius: 0; padding: 1rem; } .topbar { padding: .7rem 1rem; } }
+  </style>
+</head>
+<body>
+  <nav class="topbar"><a href="{{ url_for('index') }}">All Markdown</a><span class="filename">{{ filename }}</span></nav>
+  <main id="document">{{ content|safe }}</main>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+    const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "default", securityLevel: "strict", flowchart: { htmlLabels: true, useMaxWidth: false } });
+
+    document.querySelectorAll("table").forEach(table => {
+      if (!table.parentElement.classList.contains("table-wrap")) {
+        const wrap = document.createElement("div"); wrap.className = "table-wrap";
+        table.parentNode.insertBefore(wrap, table); wrap.appendChild(table);
+      }
+    });
+
+    document.querySelectorAll("pre > code.language-mermaid").forEach(code => {
+      const host = code.closest(".codehilite") || code.parentElement;
+      const diagram = document.createElement("div"); diagram.className = "mermaid"; diagram.textContent = code.textContent;
+      host.replaceWith(diagram);
+    });
+
+    try { await mermaid.run({ querySelector: ".mermaid" }); }
+    catch (error) {
+      document.querySelectorAll(".mermaid").forEach(node => { if (!node.querySelector("svg")) { node.className = "error"; node.textContent = `Mermaid rendering failed:\n${error}`; } });
+    }
+
+    function enableDiagramControls(diagram) {
+      const shell = document.createElement("div"); shell.className = "diagram-shell";
+      const canvas = document.createElement("div"); canvas.className = "diagram-canvas";
+      diagram.parentNode.insertBefore(shell, diagram); canvas.appendChild(diagram); shell.appendChild(canvas);
+      const tools = document.createElement("div"); tools.className = "diagram-tools";
+      tools.innerHTML = '<button title="Zoom in">+</button><button title="Zoom out">−</button><button title="Reset">Reset</button><button title="Fullscreen">⛶</button>';
+      shell.appendChild(tools);
+      let scale = 1, x = 0, y = 0, dragging = false, startX = 0, startY = 0;
+      const apply = () => canvas.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+      const zoom = delta => { scale = Math.min(4, Math.max(.45, scale + delta)); apply(); };
+      tools.children[0].onclick = () => zoom(.2); tools.children[1].onclick = () => zoom(-.2);
+      tools.children[2].onclick = () => { scale = 1; x = y = 0; apply(); };
+      tools.children[3].onclick = () => shell.requestFullscreen?.();
+      shell.addEventListener("wheel", e => { e.preventDefault(); zoom(e.deltaY < 0 ? .12 : -.12); }, { passive: false });
+      canvas.addEventListener("pointerdown", e => { dragging = true; startX = e.clientX - x; startY = e.clientY - y; canvas.classList.add("dragging"); canvas.setPointerCapture(e.pointerId); });
+      canvas.addEventListener("pointermove", e => { if (dragging) { x = e.clientX - startX; y = e.clientY - startY; apply(); } });
+      canvas.addEventListener("pointerup", () => { dragging = false; canvas.classList.remove("dragging"); });
+    }
+    document.querySelectorAll(".mermaid").forEach(enableDiagramControls);
+
+    document.querySelectorAll("pre").forEach(pre => {
+      if (pre.closest(".diagram-shell")) return;
+      const container = pre.closest(".codehilite") || pre;
+      if (container.querySelector(":scope > .copy-code")) return;
+      const button = document.createElement("button"); button.className = "copy-code"; button.textContent = "Copy";
+      button.onclick = async () => { await navigator.clipboard.writeText(pre.innerText); button.textContent = "Copied"; setTimeout(() => button.textContent = "Copy", 1200); };
+      container.appendChild(button);
+    });
+  </script>
+</body>
+</html>
