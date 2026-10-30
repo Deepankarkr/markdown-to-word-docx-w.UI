@@ -25,6 +25,35 @@ body {
   transform: rotate(-0.25deg);
 }
 
+.navbar {
+  display: flex;
+  gap: 8px;
+  margin: -8px 0 18px;
+  padding-bottom: 12px;
+  border-bottom: 2px dashed #cbd5e1;
+}
+
+.nav-link {
+  padding: 8px 16px;
+  border: 2px solid transparent;
+  border-radius: 11px;
+  color: #52606d;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  background: #eef6ff;
+  color: #2563eb;
+}
+
+.nav-link.active {
+  border-color: #263238;
+  background: #3a86ff;
+  color: #fff;
+  box-shadow: 3px 4px 0 #263238;
+}
+
 .header {
   border-bottom: 1px solid #e5e7eb;
   margin-bottom: 16px;
@@ -165,7 +194,8 @@ h1 {
   font-weight: 800;
 }
 
-.selected-files ul {
+.selected-files ul,
+.selected-files ol {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px 18px;
@@ -291,6 +321,23 @@ button:hover {
   background: #d94867;
   transform: translate(2px, 2px);
   box-shadow: 2px 3px 0 #263238;
+}
+
+button:disabled,
+button:disabled:hover {
+  background: #aab3c2;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 4px 5px 0 #263238;
+}
+
+.privacy-note {
+  margin: 16px 2px;
+  padding: 11px 13px;
+  border-left: 4px solid #2a9d8f;
+  background: #edf9f5;
+  color: #52606d;
+  line-height: 1.5;
 }
 
 .actions {

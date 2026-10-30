@@ -21,17 +21,29 @@
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.7 system-ui, sans-serif; }
-    .topbar { position: sticky; top: 0; z-index: 20; display: flex; gap: 1rem; align-items: center;
-      padding: .75rem max(1rem, calc((100vw - 1120px) / 2)); background: color-mix(in srgb, var(--surface) 92%, transparent);
-      border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); }
-    .topbar a { color: var(--accent); text-decoration: none; font-weight: 650; }
-    .filename { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
     main { width: min(1120px, calc(100% - 2rem)); margin: 2rem auto 5rem; padding: clamp(1.2rem, 4vw, 4rem);
       background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
-    h1, h2, h3, h4 { line-height: 1.25; scroll-margin-top: 5rem; }
-    h1 { font-size: clamp(2rem, 5vw, 3.2rem); padding-bottom: .55rem; border-bottom: 2px solid var(--border); }
-    h2 { margin-top: 2.8rem; padding-bottom: .35rem; border-bottom: 1px solid var(--border); }
-    h3 { margin-top: 2rem; }
+    h1, h2, h3, h4, h5, h6 {
+      line-height: 1.4;
+      scroll-margin-top: 1rem;
+      text-wrap: balance;
+    }
+    h1 {
+      margin-top: 0;
+      padding-bottom: .45rem;
+      border-bottom: 3px double var(--accent);
+      font-size: 1.45rem;
+    }
+    h2 {
+      margin-top: 2.4rem;
+      padding-bottom: .3rem;
+      border-bottom: 1px solid var(--accent);
+      font-size: 1.3rem;
+    }
+    h3 { margin-top: 2rem; font-size: 1.18rem; text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: .3rem; }
+    h4 { font-size: 1.1rem; color: var(--accent); }
+    h5 { font-size: 1.05rem; font-style: italic; }
+    h6 { font-size: 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
     a { color: var(--accent); text-underline-offset: 3px; }
     blockquote { margin: 1.4rem 0; padding: .7rem 1.2rem; color: var(--muted); border-left: 4px solid var(--accent); background: var(--bg); }
     img { max-width: 100%; height: auto; border-radius: 10px; }
@@ -60,11 +72,10 @@
     .diagram-shell:fullscreen .diagram-canvas { height: 100%; display: grid; place-items: center; }
     .error { padding: 1rem; border: 1px solid #dc2626; border-radius: 8px; color: #dc2626; white-space: pre-wrap; }
     {{ pygments_css|safe }}
-    @media (max-width: 650px) { main { width: 100%; margin: 0; border: 0; border-radius: 0; padding: 1rem; } .topbar { padding: .7rem 1rem; } }
+    @media (max-width: 650px) { main { width: 100%; margin: 0; border: 0; border-radius: 0; padding: 1rem; } }
   </style>
 </head>
 <body>
-  <nav class="topbar"><a href="{{ url_for('index') }}">All Markdown</a><span class="filename">{{ filename }}</span></nav>
   <main id="document">{{ content|safe }}</main>
   <script type="module">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";

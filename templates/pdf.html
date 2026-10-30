@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Merge PDF Files</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="card">
+    <nav class="navbar" aria-label="Tools">
+      <a class="nav-link" href="/">Markdown</a>
+      <a class="nav-link active" href="/pdf" aria-current="page">PDF</a>
+    </nav>
+
+    <div class="header">
+      <div>
+        <p class="eyebrow">PDF tools</p>
+        <h1>Merge PDF files</h1>
+        <p class="intro">Combine PDFs in the order you select them. Files are processed locally by this app and pages are preserved without image conversion.</p>
+      </div>
+    </div>
+
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form action="/merge-pdf" method="post" enctype="multipart/form-data">
+      <label class="upload-box">
+        <input id="pdf-files" class="file-input" type="file" name="pdf_files" accept=".pdf,application/pdf" multiple required>
+        <span class="upload-title">Upload PDF files</span>
+        <span class="upload-help">Select at least two PDFs in the order they should appear</span>
+        <span class="file-picker-row">
+          <span class="file-picker-button">Choose files</span>
+          <span id="file-summary" class="file-summary" aria-live="polite">No files selected</span>
+        </span>
+      </label>
+
+      <div id="selected-files" class="selected-files" hidden>
+        <div class="selected-files-heading">
+          <strong>Merge order</strong>
+          <span id="file-count"></span>
+        </div>
+        <ol id="file-list"></ol>
+      </div>
+
+      <p class="privacy-note">PDF content stays on this computer. The merger copies existing page data, keeping quality unchanged and avoiding the large files caused by rasterizing pages.</p>
+      <button id="merge-button" type="submit" disabled>Merge PDFs</button>
+    </form>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById('pdf-files');
+    const fileSummary = document.getElementById('file-summary');
+    const selectedFiles = document.getElementById('selected-files');
+    const fileCount = document.getElementById('file-count');
+    const fileList = document.getElementById('file-list');
+    const mergeButton = document.getElementById('merge-button');
+
+    fileInput.addEventListener('change', () => {
+      const files = Array.from(fileInput.files);
+      selectedFiles.hidden = files.length === 0;
+      mergeButton.disabled = files.length < 2;
+      fileSummary.textContent = files.length === 0
+        ? 'No files selected'
+        : `${files.length} ${files.length === 1 ? 'file' : 'files'} selected`;
+      fileCount.textContent = files.length;
+      fileList.replaceChildren(...files.map(file => {
+        const item = document.createElement('li');
+        item.textContent = file.name;
+        item.title = file.name;
+        return item;
+      }));
+    });
+  </script>
+</body>
+</html>

@@ -18,6 +18,7 @@ from flask import Flask, render_template, request, send_file
 from markdown import markdown
 from markupsafe import Markup
 from pygments.formatters import HtmlFormatter
+from pypdf import PdfReader, PdfWriter
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
@@ -31,6 +32,7 @@ from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024
 ALLOWED_EXTENSIONS = {"md", "markdown", "txt"}
+PDF_EXTENSION = "pdf"
 INK, PAPER = "263238", "FFFDF3"
 ACCENTS = ["E85D75", "3A86FF", "2A9D8F", "F4A261", "8E6CCF", "E76F51"]
 PASTELS = ["FFE1E8", "DDEEFF", "DDF4EC", "FFF0CC", "ECE2FF", "FFE5D5"]
@@ -63,6 +65,26 @@ def clean_name(filename):
     leaf_name = (filename or "document.md").replace("\\", "/").rsplit("/", 1)[-1]
     leaf_name = "".join(char for char in leaf_name if ord(char) >= 32).strip()
     return Path(leaf_name or "document.md").stem or "document"
+
+
+def is_pdf(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() == PDF_EXTENSION
+
+
+def merge_pdf_files(files):
+    """Merge PDF page streams without rendering or recompressing their contents."""
+    writer = PdfWriter()
+    for file in files:
+        reader = PdfReader(file.stream, strict=False)
+        if reader.is_encrypted:
+            raise ValueError(f'"{file.filename}" is password protected.')
+        writer.append(reader)
+
+    output = io.BytesIO()
+    writer.write(output)
+    writer.close()
+    output.seek(0)
+    return output
 
 
 def seeded_rng(text):
@@ -547,6 +569,35 @@ def make_merged_docx(files):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/pdf")
+def pdf_tools():
+    return render_template("pdf.html")
+
+
+@app.post("/merge-pdf")
+def merge_pdfs():
+    files = request.files.getlist("pdf_files")
+    valid = [file for file in files if file and file.filename and is_pdf(file.filename)]
+    if len(valid) < 2:
+        return render_template("pdf.html", error="Please select at least two PDF files."), 400
+
+    try:
+        output = merge_pdf_files(valid)
+    except (ValueError, OSError, EOFError) as exc:
+        return render_template("pdf.html", error=f"Could not merge the PDFs: {exc}"), 400
+    except Exception:
+        return render_template(
+            "pdf.html", error="Could not merge the PDFs. Check that every file is a valid, unprotected PDF."
+        ), 400
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="merged_document.pdf",
+        mimetype="application/pdf",
+    )
 
 
 @app.post("/view")

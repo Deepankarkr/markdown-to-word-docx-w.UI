@@ -13,6 +13,7 @@ Upload multiple Markdown files and download them as Word documents.
 - Handwritten-notes Word theme with large, roomy MV Boli typography
 - Colorful headings, bullets, highlighted emphasis, tables, and sketch-style callouts
 - Deterministic visual variation for a human touch without changing Markdown content
+- Separate PDF tool that merges two or more PDFs locally without rasterizing pages
 
 ## Setup
 
